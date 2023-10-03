@@ -5,10 +5,10 @@ namespace rigelsdk.src
 {
     public static class Utils
     {
-        public static string SerializeToQuryString(object[] obj)
+        public static string SerializeToQuryString(object obj)
         {
             var str = new List<string>();
-            foreach (var property in obj)
+            foreach (dynamic property in obj.GetType().GetProperties())
             {
                 if (property != null)
                 {
@@ -17,6 +17,16 @@ namespace rigelsdk.src
             }
             return string.Join("&", str.ToArray());
         }
+
+        //public static string GenerateHMAC(string key, string salt, string input)
+        //{
+        //    var encoding = new System.Text.ASCIIEncoding();
+        //    byte[] keyBytes = encoding.GetBytes(key);
+        //    byte[] messageBytes = encoding.GetBytes(input + salt);
+        //    using var hmacsha1 = new HMACSHA1(keyBytes);
+        //    byte[] hashmessage = hmacsha1.ComputeHash(messageBytes);
+        //    return Convert.ToBase64String(hashmessage);
+        //}
         public static string Sign(string key, string salt, string input)
         {
             using var hmac = new HMACSHA1(Encoding.UTF8.GetBytes(key));
@@ -32,18 +42,18 @@ namespace rigelsdk.src
             return base64Url;
         }
 
-        public static string SignQueryString(string key, string salt, string requestPath, string queryString, int expiry)
+        public static string SignQueryString(string key, string salt, string requestPath, string queryString, long expiry)
         {
             List<string> signableSlice = new()
             {
-                $"request_path ={requestPath}"
+                $"request_path={requestPath}"
             };
             if (!string.IsNullOrEmpty(queryString))
             {
                 var querySlice = queryString.Split('&');
                 if (expiry is not 0 and not -1)
                 {
-                    _ = querySlice.Append($"X - ExpiresAt ={expiry}");
+                    _ = querySlice.Append($"X-ExpiresAt={expiry}");
                 }
                 querySlice = querySlice.OrderBy(q => q).ToList().ToArray();
                 signableSlice.AddRange(querySlice);
@@ -51,7 +61,7 @@ namespace rigelsdk.src
 
             var signableString = string.Join('&', signableSlice);
             var signature = Sign(key, salt, signableString);
-            signableSlice.Add($"X - Signature ={signature}");
+            signableSlice.Add($"X-Signature={signature}");
 
             // Removing request_path
             signableSlice.RemoveAt(0);
