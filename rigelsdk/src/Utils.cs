@@ -1,32 +1,23 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
-
 namespace rigelsdk.src
 {
     public static class Utils
     {
-        public static string SerializeToQuryString(object obj)
+        public static string SerializeToQuryString(Dictionary<string, string> obj)
         {
             var str = new List<string>();
-            foreach (dynamic property in obj.GetType().GetProperties())
+            foreach (var property in obj)
             {
-                if (property != null)
+                Console.WriteLine($"property==>{property}");
+                if (property.Value != null)
                 {
-                    str.Add(property + "=" + property.ToString());
+                    str.Add(property.Key + "=" + property.Value.ToString());
                 }
             }
             return string.Join("&", str.ToArray());
         }
 
-        //public static string GenerateHMAC(string key, string salt, string input)
-        //{
-        //    var encoding = new System.Text.ASCIIEncoding();
-        //    byte[] keyBytes = encoding.GetBytes(key);
-        //    byte[] messageBytes = encoding.GetBytes(input + salt);
-        //    using var hmacsha1 = new HMACSHA1(keyBytes);
-        //    byte[] hashmessage = hmacsha1.ComputeHash(messageBytes);
-        //    return Convert.ToBase64String(hashmessage);
-        //}
         public static string Sign(string key, string salt, string input)
         {
             using var hmac = new HMACSHA1(Encoding.UTF8.GetBytes(key));
@@ -48,14 +39,14 @@ namespace rigelsdk.src
             {
                 $"request_path={requestPath}"
             };
+
             if (!string.IsNullOrEmpty(queryString))
             {
-                var querySlice = queryString.Split('&');
+                List<string> querySlice = queryString.Split('&').ToList();
                 if (expiry is not 0 and not -1)
                 {
-                    _ = querySlice.Append($"X-ExpiresAt={expiry}");
+                    querySlice.Add($"X-ExpiresAt={expiry}");
                 }
-                querySlice = querySlice.OrderBy(q => q).ToList().ToArray();
                 signableSlice.AddRange(querySlice);
             }
 

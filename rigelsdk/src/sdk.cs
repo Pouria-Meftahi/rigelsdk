@@ -1,8 +1,10 @@
 ﻿using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace rigelsdk.src
 {
-    internal class Sdk
+    public class Sdk
     {
         public string BaseURL { get; set; } = string.Empty;
         public string Key { get; set; } = string.Empty;
@@ -13,32 +15,42 @@ namespace rigelsdk.src
             Key = key;
             Salt = salt;
         }
+
         public string ProxyImage(string imageURL, Options? options, long expiry)
         {
             string queryString;
+            Dictionary<string, string> myDictionary = new()
+            {
+                { "img", imageURL }
+            };
+
             if (options is not null && options.QueryString() is not null)
             {
-                queryString = Utils.SerializeToQuryString(new { img = imageURL }) + '&' + options.QueryString();
+                queryString = Utils.SerializeToQuryString(myDictionary) + '&' + options.QueryString();
             }
             else
             {
-                queryString = Utils.SerializeToQuryString(new { img = imageURL });
+                queryString = Utils.SerializeToQuryString(myDictionary);
             }
             string? signedQueryString = Utils.SignQueryString(Key, Salt, "proxy", queryString, expiry);
             string pathURL = $"{BaseURL}/proxy?{signedQueryString}";
             return pathURL;
         }
 
-        public async Task<dynamic> CacheImage(string imageURL, Options options, long expiry)
+        public  string CacheImage(string imageURL, Options options, long expiry)
         {
             string queryString = string.Empty;
+            Dictionary<string, string> myDictionary = new()
+            {
+                { "img", imageURL }
+            };
             if (options is not null && options.QueryString() != "")
             {
-                queryString = Utils.SerializeToQuryString(new { img = imageURL }) + "&" + options.QueryString();
+                queryString = Utils.SerializeToQuryString(myDictionary) + "&" + options.QueryString();
             }
             else
             {
-                queryString = Utils.SerializeToQuryString(new { img = imageURL });
+                queryString = Utils.SerializeToQuryString(myDictionary);
             }
             string signedQueryString = Utils.SignQueryString(Key, Salt, "headsup", queryString, expiry);
             string pathURL = $"{BaseURL}/headsup?{signedQueryString}";
@@ -46,8 +58,10 @@ namespace rigelsdk.src
             try
             {
                 var client = new HttpClient();
-                var response = await client.PostAsync(pathURL, null);
-                CacheImageResponse imageResponse = (CacheImageResponse)response.Content;
+                // this endpoint return 400 !
+                HttpResponseMessage response = client.PostAsync(pathURL, null).Result;
+
+                var imageResponse = JsonSerializer.Deserialize<CacheImageResponse>(response.Content.ReadAsStringAsync().Result);
                 if (response.IsSuccessStatusCode)
                 {
                     var sqs = Utils.SignQueryString(Key, Salt, $"img{imageResponse.signature}", queryString, expiry);
@@ -56,13 +70,13 @@ namespace rigelsdk.src
                 }
                 else
                 {
-                    return response.StatusCode;
+                    return response.StatusCode.ToString();
                 }
             }
             catch
             {
                 //TODO:Add loger
-                return 503;
+                return 503.ToString();
             }
         }
 
@@ -78,7 +92,7 @@ namespace rigelsdk.src
                 if (response.IsSuccessStatusCode)
                 {
                     // TODO: Fix this to check for whether data satisfies interface or not
-                    IEnumerable<CacheImageResponse> result = (IEnumerable<CacheImageResponse>)response.Content;
+                    IEnumerable<CacheImageResponse> result = (IEnumerable<CacheImageResponse>)response.Content.ReadAsStringAsync();
                     foreach (var item in result)
                     {
                         var sqs = Utils.SignQueryString(Key, Salt, $"img/{item.signature}", "", expiry);

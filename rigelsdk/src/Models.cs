@@ -1,6 +1,6 @@
 ﻿namespace rigelsdk.src
 {
-    public interface CacheImageResponse
+    public class CacheImageResponse
     {
         public string img { get; set; }
         public string signature { get; set; }
@@ -45,10 +45,10 @@
         public string Extend { get; set; }
         public string Rotate { get; set; }
         public string Background { get; set; }
-        public string Gravity { get; set; }
+        public Gravity? Gravity { get; set; } = null;
         public string Watermark { get; set; }
         public string WatermarkImage { get; set; }
-        public string Type { get; set; }
+        public ImageType? Type { get; set; } = null;
         public string Interpolator { get; set; }
         public string Format { get; set; }
         public string Page { get; set; }
@@ -74,7 +74,7 @@
             var queryParams = new List<string>();
             foreach (var item in this.GetType().GetProperties())
             {
-                if (item.CanRead)
+                if (item.CanRead && item.GetValue(this)!= null)
                 {
                     queryParams.Add(Uri.EscapeDataString(item.Name.ToLower()) + "=" + Uri.EscapeDataString(item.GetValue(this)?.ToString()));
                 }
