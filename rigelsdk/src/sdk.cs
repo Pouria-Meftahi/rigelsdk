@@ -1,124 +1,153 @@
-﻿using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+﻿using RigelSdk.src.Models;
+using RigelSdk.src.Utils;
+using System.Net.Http.Json;
 
-namespace rigelsdk.src
+namespace RigelSdk.src
 {
-    public class Sdk
+    /// <summary>
+    /// Main SDK class for interacting with Rigel image proxy service
+    /// </summary>
+    public class Sdk : ISdk
     {
-        public string BaseURL { get; set; } = string.Empty;
-        public string Key { get; set; } = string.Empty;
-        public string Salt { get; set; } = string.Empty;
-        public Sdk(string baseURL, string key, string salt)
+        private readonly string _baseUrl;
+        private readonly string _key;
+        private readonly string _salt;
+        private readonly HttpClient _httpClient;
+
+        public Sdk(string baseUrl, string key, string salt)
         {
-            BaseURL = baseURL;
-            Key = key;
-            Salt = salt;
+            _baseUrl = baseUrl.TrimEnd('/');
+            _key = key;
+            _salt = salt;
+            _httpClient = new HttpClient();
         }
 
-        public string ProxyImage(string imageURL, Options? options, long expiry)
+        public Sdk(string baseUrl, string key, string salt, HttpClient httpClient)
         {
-            string queryString;
-            Dictionary<string, string> myDictionary = new()
-            {
-                { "img", imageURL }
-            };
-
-            if (options is not null && options.QueryString() is not null)
-            {
-                queryString = Utils.SerializeToQuryString(myDictionary) + '&' + options.QueryString();
-            }
-            else
-            {
-                queryString = Utils.SerializeToQuryString(myDictionary);
-            }
-            string? signedQueryString = Utils.SignQueryString(Key, Salt, "proxy", queryString, expiry);
-            string pathURL = $"{BaseURL}/proxy?{signedQueryString}";
-            return pathURL;
+            _baseUrl = baseUrl.TrimEnd('/');
+            _key = key;
+            _salt = salt;
+            _httpClient = httpClient;
         }
 
-        public  string CacheImage(string imageURL, Options options, long expiry)
+        /// <summary>
+        /// Generates a proxy URL for an image with optional transformations
+        /// </summary>
+        public Task<string> ProxyImageAsync(string imageUrl, Options? options, long expiry)
         {
-            string queryString = string.Empty;
-            Dictionary<string, string> myDictionary = new()
-            {
-                { "img", imageURL }
-            };
-            if (options is not null && options.QueryString() != "")
-            {
-                queryString = Utils.SerializeToQuryString(myDictionary) + "&" + options.QueryString();
-            }
-            else
-            {
-                queryString = Utils.SerializeToQuryString(myDictionary);
-            }
-            string signedQueryString = Utils.SignQueryString(Key, Salt, "headsup", queryString, expiry);
-            string pathURL = $"{BaseURL}/headsup?{signedQueryString}";
+            var queryString = BuildQueryString(imageUrl, options);
+            var signedQueryString = SignatureUtils.SignQueryString(_key, _salt, "proxy", queryString, expiry);
+            var pathUrl = $"{_baseUrl}/proxy?{signedQueryString}";
+
+            return Task.FromResult(pathUrl);
+        }
+
+        /// <summary>
+        /// Caches an image and returns a short URL or status code
+        /// </summary>
+        public async Task<object> CacheImageAsync(string imageUrl, Options? options, long expiry)
+        {
+            var queryString = BuildQueryString(imageUrl, options);
+            var signedQueryString = SignatureUtils.SignQueryString(_key, _salt, "headsup", queryString, expiry);
+            var pathUrl = $"{_baseUrl}/headsup?{signedQueryString}";
 
             try
             {
-                var client = new HttpClient();
-                // this endpoint return 400 !
-                HttpResponseMessage response = client.PostAsync(pathURL, null).Result;
+                var response = await _httpClient.PostAsync(pathUrl, null);
 
-                var imageResponse = JsonSerializer.Deserialize<CacheImageResponse>(response.Content.ReadAsStringAsync().Result);
-                if (response.IsSuccessStatusCode)
+                if (!response.IsSuccessStatusCode)
                 {
-                    var sqs = Utils.SignQueryString(Key, Salt, $"img{imageResponse.signature}", queryString, expiry);
-                    string URL = $"{BaseURL}/img/{imageResponse.signature}?{sqs}";
-                    return URL;
+                    return (int)response.StatusCode;
                 }
-                else
+
+                var imageResponse = await response.Content.ReadFromJsonAsync<CacheImageResponse>();
+
+                if (imageResponse == null)
                 {
-                    return response.StatusCode.ToString();
+                    return 503;
                 }
+
+                var sqs = SignatureUtils.SignQueryString(_key, _salt, $"img/{imageResponse.Signature}", "", expiry);
+                var url = $"{_baseUrl}/img/{imageResponse.Signature}?{sqs}";
+
+                return url;
             }
-            catch
+            catch (Exception)
             {
-                //TODO:Add loger
-                return 503.ToString();
+                return 503;
             }
         }
 
-        public async Task<IEnumerable<CacheImageResponse>> BatchedCacheImage(List<ProxyParams> proxyParamsList, long expiry)
+        /// <summary>
+        /// Caches multiple images in a single batch request
+        /// </summary>
+        public async Task<List<CacheImageResponse>> BatchedCacheImageAsync(List<ProxyParams> proxyParams, long expiry)
         {
+            var signedQueryString = SignatureUtils.SignQueryString(_key, _salt, "batched-headsup", "", expiry);
+            var pathUrl = $"{_baseUrl}/batched-headsup?{signedQueryString}";
 
-            var signedQueryString = Utils.SignQueryString(Key, Salt, "batched-headsup", "", expiry);
-            string pathURL = $"{BaseURL}/batched-headsup?{signedQueryString}";
             try
             {
-                var client = new HttpClient();
-                var response = await client.PostAsJsonAsync(pathURL, proxyParamsList);
-                if (response.IsSuccessStatusCode)
+                var response = await _httpClient.PostAsJsonAsync(pathUrl, proxyParams);
+
+                if (!response.IsSuccessStatusCode)
                 {
-                    // TODO: Fix this to check for whether data satisfies interface or not
-                    IEnumerable<CacheImageResponse> result = (IEnumerable<CacheImageResponse>)response.Content.ReadAsStringAsync();
-                    foreach (var item in result)
-                    {
-                        var sqs = Utils.SignQueryString(Key, Salt, $"img/{item.signature}", "", expiry);
-                        item.short_url = $"{BaseURL}/img/{item.signature}?{sqs}";
-                    }
-                    return result;
+                    throw new Exception($"Failed when caching image with status code = {response.StatusCode}");
                 }
-                else
+
+                var result = await response.Content.ReadFromJsonAsync<List<CacheImageResponse>>();
+
+                if (result == null)
                 {
-                    throw new($"Failed when caching image with status code = {response.StatusCode}");
+                    throw new Exception("Failed to deserialize response");
                 }
+
+                foreach (var cacheImageResponse in result)
+                {
+                    var sqs = SignatureUtils.SignQueryString(_key, _salt, $"img/{cacheImageResponse.Signature}", "", expiry);
+                    cacheImageResponse.ShortUrl = $"{_baseUrl}/img/{cacheImageResponse.Signature}?{sqs}";
+                }
+
+                return result;
             }
-            catch
+            catch (Exception ex)
             {
-                throw;
+                throw new Exception("Batched cache operation failed", ex);
             }
         }
 
-        public dynamic TryShortURL(string imageURL, Options options, long expiry)
+        /// <summary>
+        /// Tries to create a short URL, falls back to proxy URL if caching fails
+        /// </summary>
+        public async Task<string> TryShortUrlAsync(string imageUrl, Options? options, long expiry)
         {
-            var pathUrl = CacheImage(imageURL, options, expiry);
-            if (pathUrl is string)
+            var url = await CacheImageAsync(imageUrl, options, expiry);
+
+            if (url is string shortUrl)
             {
-                return pathUrl;
+                return shortUrl;
             }
-            return ProxyImage(imageURL, options, expiry);
+
+            return await ProxyImageAsync(imageUrl, options, expiry);
+        }
+
+        private string BuildQueryString(string imageUrl, Options? options)
+        {
+            var baseQuery = QueryStringUtils.SerializeToQueryString(new Dictionary<string, string>
+            {
+                { "img", imageUrl }
+            });
+
+            if (options != null)
+            {
+                var optionsQuery = options.ToQueryString();
+                if (!string.IsNullOrEmpty(optionsQuery))
+                {
+                    return $"{baseQuery}&{optionsQuery}";
+                }
+            }
+
+            return baseQuery;
         }
     }
 }

@@ -1,11 +1,16 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.7.34018.315
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.11018.127 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "rigelsdk", "rigelsdk\rigelsdk.csproj", "{119E7A0E-9584-4F49-8D32-C18CC0380498}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RigelSdk", "rigelsdk\RigelSdk.csproj", "{119E7A0E-9584-4F49-8D32-C18CC0380498}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "testSdk", "testSdk\testSdk.csproj", "{3FD892CA-AF58-4514-A548-AD9673B419E1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "testSdk\Tests.csproj", "{3FD892CA-AF58-4514-A548-AD9673B419E1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{3E2CF4FF-F3BD-457E-86E6-01B1A69E7C4A}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

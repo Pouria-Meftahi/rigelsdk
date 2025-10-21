@@ -1,9 +1,26 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>latest</LangVersion>
+		<RootNamespace>RigelSdk</RootNamespace>
+		<PackageId>RigelSdk</PackageId>
+		<Version>1.0.0</Version>
+		<Authors>Pouria Meftahi</Authors>
+		<Description>C# SDK for Rigel Image Proxy Service</Description>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<RepositoryUrl>https://github.com/Pouria-Meftahi/RigelSdk</RepositoryUrl>
+		<PackageTags>rigel;image;proxy;sdk</PackageTags>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.Text.Json" Version="8.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="src\Interfaces\" />
+	</ItemGroup>
 
 </Project>
