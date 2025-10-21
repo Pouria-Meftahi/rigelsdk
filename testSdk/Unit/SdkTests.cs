@@ -112,7 +112,7 @@ namespace Tests.Unit
                 HttpStatusCode.OK,
                 JsonSerializer.Serialize(mockResponse)
             );
-            var sdk = new RigelSdk(TestConstants.BaseUrl, TestConstants.Key, TestConstants.Salt, mockHttpClient);
+            var sdk = new Sdk(TestConstants.BaseUrl, TestConstants.Key, TestConstants.Salt, mockHttpClient);
             var options = new Options { Width = 300, Height = 300, Type = ImageType.WEBP };
 
             // Act
@@ -132,7 +132,7 @@ namespace Tests.Unit
                 HttpStatusCode.ServiceUnavailable,
                 ""
             );
-            var sdk = new RigelSdk(TestConstants.BaseUrl, TestConstants.Key, TestConstants.Salt, mockHttpClient);
+            var sdk = new Sdk(TestConstants.BaseUrl, TestConstants.Key, TestConstants.Salt, mockHttpClient);
             var options = new Options { Width = 300, Height = 300, Type = ImageType.WEBP };
 
             // Act
@@ -167,7 +167,7 @@ namespace Tests.Unit
                 HttpStatusCode.OK,
                 JsonSerializer.Serialize(expectedResponses)
             );
-            var sdk = new RigelSdk(TestConstants.BaseUrl, TestConstants.Key, TestConstants.Salt, mockHttpClient);
+            var sdk = new Sdk(TestConstants.BaseUrl, TestConstants.Key, TestConstants.Salt, mockHttpClient);
 
             var proxyParams = new List<ProxyParams>
             {
@@ -194,7 +194,7 @@ namespace Tests.Unit
                 HttpStatusCode.InternalServerError,
                 ""
             );
-            var sdk = new RigelSdk(TestConstants.BaseUrl, TestConstants.Key, TestConstants.Salt, mockHttpClient);
+            var sdk = new Sdk(TestConstants.BaseUrl, TestConstants.Key, TestConstants.Salt, mockHttpClient);
             var proxyParams = new List<ProxyParams>
             {
                 new ProxyParams(TestConstants.TestImageUrl, new Options { Width = 100, Height = 100 })
@@ -220,7 +220,7 @@ namespace Tests.Unit
                 HttpStatusCode.OK,
                 JsonSerializer.Serialize(mockResponse)
             );
-            var sdk = new RigelSdk(TestConstants.BaseUrl, TestConstants.Key, TestConstants.Salt, mockHttpClient);
+            var sdk = new Sdk(TestConstants.BaseUrl, TestConstants.Key, TestConstants.Salt, mockHttpClient);
             var options = new Options { Width = 300, Height = 300, Type = ImageType.WEBP };
 
             // Act
@@ -239,7 +239,7 @@ namespace Tests.Unit
                 HttpStatusCode.ServiceUnavailable,
                 ""
             );
-            var sdk = new RigelSdk(TestConstants.BaseUrl, TestConstants.Key, TestConstants.Salt, mockHttpClient);
+            var sdk = new Sdk(TestConstants.BaseUrl, TestConstants.Key, TestConstants.Salt, mockHttpClient);
             var options = new Options { Width = 300, Height = 300, Type = ImageType.WEBP };
 
             // Act
